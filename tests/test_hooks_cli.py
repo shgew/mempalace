@@ -1540,15 +1540,17 @@ def test_precompact_hook_disabled_by_config(tmp_path):
 
 
 def test_precompact_hook_enabled_by_default(tmp_path):
-    """When auto_save is true, precompact still blocks."""
+    """When auto_save is true, precompact mines synchronously then returns {}."""
     with patch("mempalace.hooks_cli.MempalaceConfig") as mock_cfg_cls:
         mock_cfg_cls.return_value.hooks_auto_save = True
-        result = _capture_hook_output(
-            hook_precompact,
-            {"session_id": "test"},
-            state_dir=tmp_path,
-        )
-    assert result["decision"] == "block"
+        with patch("mempalace.hooks_cli._mine_sync") as mock_mine:
+            result = _capture_hook_output(
+                hook_precompact,
+                {"session_id": "test"},
+                state_dir=tmp_path,
+            )
+    assert result == {}
+    mock_mine.assert_called_once()
 
 
 def test_run_hook_unknown_hook():
