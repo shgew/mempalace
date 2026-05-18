@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from mempalace.miner import detect_room, load_config, mine, scan_project, status
-from mempalace.palace import NORMALIZE_VERSION, file_already_mined
+from mempalace.palace import NORMALIZE_VERSION, file_already_mined, prefetch_mined_set
 
 
 def write_file(path: Path, content: str):
@@ -404,6 +404,82 @@ def test_file_already_mined_check_mtime():
         # Release ChromaDB file handles before cleanup (required on Windows)
         del col, client
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_file_already_mined_scopes_convo_extract_mode():
+    tmpdir = tempfile.mkdtemp()
+    try:
+        palace_path = os.path.join(tmpdir, "palace")
+        os.makedirs(palace_path)
+        client = chromadb.PersistentClient(path=palace_path)
+        col = client.get_or_create_collection(
+            "mempalace_drawers", metadata={"hnsw:space": "cosine"}
+        )
+
+        source_file = os.path.join(tmpdir, "chat.jsonl")
+        col.add(
+            ids=["exchange"],
+            documents=["exchange drawer"],
+            metadatas=[
+                {
+                    "source_file": source_file,
+                    "extract_mode": "exchange",
+                    "normalize_version": NORMALIZE_VERSION,
+                }
+            ],
+        )
+
+        assert file_already_mined(col, source_file, extract_mode="exchange") is True
+        assert file_already_mined(col, source_file, extract_mode="general") is False
+        assert source_file in prefetch_mined_set(col, extract_mode="exchange")
+        assert source_file not in prefetch_mined_set(col, extract_mode="general")
+
+        col.add(
+            ids=["general"],
+            documents=["general drawer"],
+            metadatas=[
+                {
+                    "source_file": source_file,
+                    "extract_mode": "general",
+                    "normalize_version": NORMALIZE_VERSION,
+                }
+            ],
+        )
+
+        assert file_already_mined(col, source_file, extract_mode="general") is True
+        assert source_file in prefetch_mined_set(col, extract_mode="general")
+    finally:
+        del col, client
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_file_already_mined_extract_mode_paginates_large_sources():
+    source_file = "/tmp/long-chat.jsonl"
+    metadatas = [
+        {
+            "source_file": source_file,
+            "extract_mode": "exchange",
+            "normalize_version": NORMALIZE_VERSION,
+        }
+        for _ in range(1000)
+    ]
+    metadatas.append(
+        {
+            "source_file": source_file,
+            "extract_mode": "general",
+            "normalize_version": NORMALIZE_VERSION,
+        }
+    )
+
+    class FakeCollection:
+        def get(self, where=None, limit=1, offset=0, include=None):
+            batch = metadatas[offset : offset + limit]
+            return {
+                "ids": [f"id-{i}" for i in range(offset, offset + len(batch))],
+                "metadatas": batch,
+            }
+
+    assert file_already_mined(FakeCollection(), source_file, extract_mode="general") is True
 
 
 def test_mine_dry_run_with_tiny_file_no_crash():
