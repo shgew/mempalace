@@ -75,6 +75,15 @@ dev = [
     # discover the failure at CI time (which caused the 4 AM
     # ruff-version-mismatch on PRs #1579 / #1584 on 2026-05-22).
     "pre-commit>=3.0",
+    # mypy — static type checker. Catches lazy ``list`` / ``dict``
+    # annotations that should be ``list[str]`` / ``dict[str, int]``,
+    # missing return types, mismatched signatures across call sites.
+    # Run ad-hoc with ``mypy mempalace/``; CI doesn't gate on it yet but
+    # contributors should fix mypy errors they see before pushing. Closes
+    # the type-hint specificity bug class gemini-code-assist flagged on
+    # PR #1588 (2026-05-22) — ``drawer_ids: list`` → ``list[str]``,
+    # ``-> list:`` → ``-> list[DrawerCandidate]:``.
+    "mypy>=1.0",
 ]
 spellcheck = ["autocorrect>=2.0"]
 # Hardware acceleration for the ONNX embedding model. Install exactly one:
@@ -109,6 +118,7 @@ dev = [
     "psutil>=5.9",
     "hypothesis>=6.0",
     "pre-commit>=3.0",
+    "mypy>=1.0",
 ]
 
 [build-system]
