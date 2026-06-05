@@ -13,11 +13,15 @@ set -e
 
 case "${1:-mcp}" in
     mcp)
-        shift 2>/dev/null || true
+        if [ "$#" -gt 0 ]; then
+            shift
+        fi
         exec mempalace-mcp "$@"
         ;;
     cli)
-        shift
+        if [ "$#" -gt 0 ]; then
+            shift
+        fi
         exec mempalace "$@"
         ;;
     *)

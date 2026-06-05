@@ -82,8 +82,8 @@ docker build -t mempalace .
 # MCP server over stdio — note the `-i` flag (JSON-RPC needs stdin)
 docker run -i --rm -v mempalace-data:/data mempalace
 
-# Run any CLI command instead
-docker run --rm -v mempalace-data:/data mempalace mine /work
+# Run any CLI command instead (mount the host directory you want to mine)
+docker run --rm -v mempalace-data:/data -v /path/to/project:/work mempalace mine /work
 docker run --rm -v mempalace-data:/data mempalace search "why GraphQL"
 ```
 
