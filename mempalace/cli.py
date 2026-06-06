@@ -812,6 +812,18 @@ def cmd_migrate(args):
     )
 
 
+def cmd_migrate_wings(args):
+    """Normalize legacy wing names (strip leading/trailing separators)."""
+    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    from .migrate import migrate_wing_names
+
+    migrate_wing_names(
+        palace_path=palace_path,
+        dry_run=args.dry_run,
+        confirm=getattr(args, "yes", False),
+    )
+
+
 def cmd_status(args):
     from .miner import status
 
@@ -1662,6 +1674,18 @@ def main():
         "--yes", action="store_true", help="Skip confirmation for destructive changes"
     )
 
+    # migrate-wings
+    p_migrate_wings = sub.add_parser(
+        "migrate-wings",
+        help="Normalize legacy wing names (strip leading/trailing separators) so pre-#1675 palaces stay discoverable",
+    )
+    p_migrate_wings.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without modifying the palace",
+    )
+    p_migrate_wings.add_argument("--yes", action="store_true", help="Skip the confirmation prompt")
+
     p_status = sub.add_parser("status", help="Show what's been filed")
     p_status.add_argument(
         "--backend",
@@ -1706,6 +1730,7 @@ def main():
         "repair": cmd_repair,
         "repair-status": cmd_repair_status,
         "migrate": cmd_migrate,
+        "migrate-wings": cmd_migrate_wings,
         "status": cmd_status,
     }
     dispatch[args.command](args)
