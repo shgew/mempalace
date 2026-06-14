@@ -537,6 +537,25 @@ class TestHandleRequest:
         assert "mempalace_add_drawer" in names
         assert "mempalace_kg_add" in names
 
+    def test_tool_input_schemas_have_no_top_level_combinators(self):
+        """Anthropic's Messages API rejects top-level oneOf/anyOf/allOf in
+        a tool's input_schema. Keep every TOOLS[*].input_schema flat at the
+        root so opencode (and any Anthropic-backed client) can register the
+        tool list without a 400."""
+        from mempalace.mcp_server import handle_request
+
+        resp = handle_request({"method": "tools/list", "id": 2, "params": {}})
+        offenders = []
+        for tool in resp["result"]["tools"]:
+            schema = tool.get("inputSchema") or tool.get("input_schema") or {}
+            for combinator in ("oneOf", "anyOf", "allOf"):
+                if combinator in schema:
+                    offenders.append((tool["name"], combinator))
+        assert offenders == [], (
+            "Anthropic API rejects top-level oneOf/anyOf/allOf in tool "
+            f"input_schema. Offenders: {offenders}"
+        )
+
     def test_null_arguments_does_not_hang(self, monkeypatch, config, palace_path, seeded_kg):
         """Sending arguments: null should return a result, not hang (#394)."""
         _patch_mcp_server(monkeypatch, config, seeded_kg)

@@ -2662,13 +2662,14 @@ TOOLS = {
                     "description": "Alias for 'entry' — accepted because add_drawer uses 'content'. Provide either 'entry' or 'content'; 'entry' wins if both are given.",
                 },
             },
-            # agent_name is always required; 'entry' or its alias 'content' must
-            # be present (the server remaps content->entry at dispatch).
+            # Only agent_name is enforced at the schema level. The dispatcher
+            # remaps content->entry before calling the handler, and the handler
+            # signature treats entry as required, so a call missing both still
+            # surfaces the standard -32602 missing-parameter error. Anthropic's
+            # Messages API rejects top-level oneOf/anyOf/allOf in tool
+            # input_schema, so we cannot encode the entry-or-content constraint
+            # here.
             "required": ["agent_name"],
-            "anyOf": [
-                {"required": ["entry"]},
-                {"required": ["content"]},
-            ],
         },
         "handler": tool_diary_write,
     },
